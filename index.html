@@ -1,0 +1,662 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>臨床數據智慧分析平台</title>
+    <!-- 引入 Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- 引入 SheetJS 解析 Excel/CSV -->
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+    <!-- 引入 Chart.js 繪製圖表 -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- 引入 Chart.js DataLabels 插件 (用於顯示標籤) -->
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.2.0"></script>
+    
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        'brand-dark': '#0f172a',
+                        'brand-blue': '#1e293b',
+                        'brand-teal': '#0ea5e9',
+                        'brand-teal-light': '#e0f2fe',
+                        'brand-light-bg': '#f8fafc',
+                    },
+                    boxShadow: {
+                        'soft': '0 10px 40px -10px rgba(0,0,0,0.05)',
+                        'inner-soft': 'inset 0 2px 4px 0 rgba(0, 0, 0, 0.02)',
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700;900&display=swap');
+        
+        body {
+            background: linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%);
+            font-family: 'Noto Sans TC', sans-serif;
+        }
+        .header-border {
+            border-bottom: 3px solid #0ea5e9;
+        }
+        .logo-gradient {
+            background: linear-gradient(135deg, #0ea5e9 0%, #3b82f6 100%);
+        }
+        .glass-panel {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.5);
+        }
+        /* 自訂捲軸 */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: transparent; 
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #cbd5e1; 
+            border-radius: 10px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8; 
+        }
+        
+        /* Tab 切換動畫 */
+        .chart-tab {
+            position: relative;
+            z-index: 1;
+        }
+        .chart-tab.active-tab {
+            color: #0ea5e9;
+        }
+        .chart-tab.active-tab::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: white;
+            border-radius: 9999px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
+            z-index: -1;
+            transition: all 0.3s ease;
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col text-slate-800">
+
+    <!-- 頂部導覽列 -->
+    <header class="bg-white header-border shadow-sm px-6 py-4 flex justify-between items-center shrink-0 sticky top-0 z-40">
+        <div class="flex items-center gap-4">
+            <!-- Logo 圖示 -->
+            <div class="w-12 h-12 rounded-xl logo-gradient shadow-md flex items-center justify-center">
+                <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path></svg>
+            </div>
+            <div>
+                <h1 class="text-xl font-black text-slate-800 tracking-wide">臨床數據智慧分析平台</h1>
+                <p class="text-[11px] font-bold text-slate-400 tracking-widest mt-0.5 uppercase">Advanced Clinical Analytics BI</p>
+            </div>
+        </div>
+        <div class="flex items-center gap-3">
+            <input type="file" id="fileInput" accept=".csv, application/vnd.openxmlformats-officedocument.spreadsheetml.sheet, application/vnd.ms-excel" class="hidden" />
+            
+            <button onclick="document.getElementById('fileInput').click()" class="bg-slate-800 hover:bg-slate-900 text-white px-6 py-2.5 rounded-xl font-bold text-sm transition-all shadow-md hover:shadow-lg flex items-center gap-2">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
+                載入臨床數據庫
+            </button>
+            <button onclick="resetData()" class="bg-white border-2 border-slate-200 hover:border-slate-300 hover:bg-slate-50 text-slate-600 px-6 py-2.5 rounded-xl font-bold text-sm transition-all">
+                重新輸入
+            </button>
+        </div>
+    </header>
+
+    <!-- 訊息提示框 -->
+    <div id="messageBox" class="fixed top-24 right-6 bg-white shadow-xl rounded-2xl border border-slate-100 p-4 max-w-sm hidden z-50 transition-all duration-300 opacity-0 translate-y-[-10px]">
+        <div class="flex items-start gap-3">
+            <div id="messageIcon" class="mt-0.5"></div>
+            <div>
+                <h4 id="messageTitle" class="text-sm font-black text-slate-800">提示</h4>
+                <p id="messageText" class="text-sm text-slate-500 mt-1 font-medium"></p>
+            </div>
+        </div>
+    </div>
+
+    <!-- 主要內容區塊 -->
+    <main class="flex-1 p-6 flex flex-col lg:flex-row gap-6 overflow-hidden max-w-[1600px] mx-auto w-full">
+        
+        <!-- 左側配置欄 -->
+        <aside class="w-full lg:w-[340px] shrink-0 flex flex-col gap-6">
+            <div class="glass-panel rounded-3xl shadow-soft p-6 flex flex-col">
+                <h2 class="text-lg font-black text-slate-800 mb-6 flex items-center gap-2">
+                    <span class="p-1.5 bg-brand-teal-light rounded-lg text-brand-teal">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
+                    </span>
+                    核心分析配置
+                </h2>
+                
+                <div class="space-y-5">
+                    <!-- 分組維度 -->
+                    <div>
+                        <label class="block text-[11px] font-black text-slate-500 mb-2 tracking-widest uppercase">分組維度 (Variable X)</label>
+                        <div class="relative">
+                            <select id="variableSelect" onchange="updateChart()" disabled class="w-full appearance-none bg-slate-50 border border-slate-200 text-slate-700 py-3.5 px-4 rounded-xl focus:outline-none focus:bg-white focus:border-brand-teal focus:ring-2 focus:ring-brand-teal/20 transition-all disabled:opacity-50 disabled:cursor-not-allowed font-medium shadow-inner-soft">
+                                <option value="">請先載入數據...</option>
+                            </select>
+                            <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-4 text-slate-400">
+                                <svg class="fill-current h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20"><path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z"/></svg>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 顯示格式 -->
+                    <div>
+                        <label class="block text-[11px] font-black text-slate-500 mb-2 tracking-widest uppercase">資料顯示格式 (Data Format)</label>
+                        <div class="relative">
+                            <select id="displayFormatSelect" onchange="updateChart()" disabled class="w-full appearance-none bg-slate-50 border border-slate-200 text-slate-700 py-3.5 px-4 rounded-xl focus:outline-none focus:bg-white focus:border-brand-teal focus:ring-2 focus:ring-brand-teal/20 transition-all disabled:opacity-50 disabled:cursor-not-allowed font-medium shadow-inner-soft">
+                                <option value="count">數量 (Count)</option>
+                                <option value="percentage">百分比 (Percentage)</option>
+                                <option value="both">數量與百分比</option>
+                            </select>
+                            <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-4 text-slate-400">
+                                <svg class="fill-current h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20"><path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z"/></svg>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 統計指標 (固定) -->
+                    <div>
+                        <label class="block text-[11px] font-black text-slate-500 mb-2 tracking-widest uppercase">統計指標 (Metric Y)</label>
+                        <div class="w-full bg-slate-50 border border-slate-200 text-slate-700 py-3.5 px-4 rounded-xl flex items-center gap-2 shadow-inner-soft">
+                            <span class="text-rose-500">📌</span>
+                            <span class="font-bold text-sm">筆數加總 (Count/Sum)</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 總數顯示卡片 -->
+                <div class="mt-8 bg-gradient-to-br from-slate-800 to-slate-900 rounded-2xl p-5 text-white shadow-lg relative overflow-hidden">
+                    <div class="absolute top-0 right-0 -mt-4 -mr-4 w-24 h-24 bg-white opacity-5 rounded-full blur-xl"></div>
+                    <p class="text-[11px] font-bold text-slate-400 tracking-widest uppercase mb-1">分析總數 (Total Records)</p>
+                    <div class="flex items-baseline gap-2">
+                        <span id="totalCountDisplay" class="text-4xl font-black tracking-tight text-white">0</span>
+                        <span class="text-sm font-medium text-slate-400">筆</span>
+                    </div>
+                </div>
+
+            </div>
+        </aside>
+
+        <!-- 右側圖表區 -->
+        <section class="glass-panel rounded-3xl shadow-soft flex-1 flex flex-col relative overflow-hidden border border-white/60">
+            
+            <!-- 圖表工具列 -->
+            <div class="px-8 pt-6 pb-4 flex flex-col sm:flex-row justify-between items-center z-10 relative gap-4 border-b border-slate-100">
+                
+                <!-- 圖表類型切換 Tabs -->
+                <div class="bg-slate-100/80 p-1.5 rounded-full flex gap-1 shadow-inner-soft border border-slate-200/60 overflow-x-auto w-full sm:w-auto">
+                    <button onclick="setChartType('bar', this)" class="chart-tab active-tab px-6 py-2 rounded-full text-sm font-bold text-slate-500 hover:text-slate-800 transition-all whitespace-nowrap">
+                        直條圖
+                    </button>
+                    <button onclick="setChartType('horizontalBar', this)" class="chart-tab px-6 py-2 rounded-full text-sm font-bold text-slate-500 hover:text-slate-800 transition-all whitespace-nowrap">
+                        橫條圖
+                    </button>
+                    <button onclick="setChartType('line', this)" class="chart-tab px-6 py-2 rounded-full text-sm font-bold text-slate-500 hover:text-slate-800 transition-all whitespace-nowrap">
+                        趨勢圖
+                    </button>
+                    <button onclick="setChartType('pie', this)" class="chart-tab px-6 py-2 rounded-full text-sm font-bold text-slate-500 hover:text-slate-800 transition-all whitespace-nowrap">
+                        圓餅圖
+                    </button>
+                </div>
+
+                <!-- 匯出按鈕 -->
+                <button onclick="exportChart()" id="exportBtn" disabled class="bg-brand-teal hover:bg-sky-600 disabled:opacity-50 disabled:cursor-not-allowed text-white px-6 py-2.5 rounded-xl font-bold text-sm transition-all shadow-md hover:shadow-lg flex items-center gap-2 shrink-0">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+                    匯出報表 (JPG)
+                </button>
+            </div>
+
+            <!-- 畫布/佔位符區域 -->
+            <div class="flex-1 flex items-center justify-center p-8 relative min-h-[400px]">
+                <!-- 初始佔位提示 -->
+                <div id="placeholder" class="text-center transition-opacity duration-300">
+                    <div class="w-24 h-24 mx-auto mb-6 bg-slate-100 rounded-full flex items-center justify-center">
+                        <svg class="w-12 h-12 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+                    </div>
+                    <h3 class="text-xl font-black text-slate-400 mb-2">等待載入分析數據</h3>
+                    <p class="text-slate-400 text-sm font-medium">請點擊上方「載入臨床數據庫」按鈕開始</p>
+                </div>
+
+                <!-- Chart.js 畫布容器 -->
+                <div id="chartContainer" class="w-full h-full absolute inset-0 p-8 pt-4 hidden opacity-0 transition-opacity duration-500 flex items-center justify-center">
+                    <canvas id="myChart"></canvas>
+                </div>
+            </div>
+            
+        </section>
+    </main>
+
+    <script>
+        // 註冊 ChartDataLabels 插件
+        Chart.register(ChartDataLabels);
+        
+        // 全域變數
+        let rawData = [];
+        let headers = [];
+        let currentChartType = 'bar'; // 'bar', 'horizontalBar', 'line', 'pie'
+        let chartInstance = null;
+        let currentTotalCount = 0;
+
+        // Chart.js 註冊自訂背景插件 (確保匯出 JPG 時背景是白色)
+        const customCanvasBackgroundColor = {
+            id: 'customCanvasBackgroundColor',
+            beforeDraw: (chart, args, options) => {
+                const {ctx} = chart;
+                ctx.save();
+                ctx.globalCompositeOperation = 'destination-over';
+                ctx.fillStyle = options.color || '#ffffff';
+                ctx.fillRect(0, 0, chart.width, chart.height);
+                ctx.restore();
+            }
+        };
+        Chart.register(customCanvasBackgroundColor);
+
+        // 監聽檔案上傳
+        document.getElementById('fileInput').addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            const fileExt = file.name.split('.').pop().toLowerCase();
+            if (!['csv', 'xlsx', 'xls'].includes(fileExt)) {
+                showMessage('檔案格式錯誤', '請上傳有效的 Excel (.xlsx, .xls) 或 CSV 檔案。', 'error');
+                return;
+            }
+
+            showMessage('資料載入中', `正在讀取及解析: ${file.name}...`, 'info');
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const data = new Uint8Array(e.target.result);
+                    const workbook = XLSX.read(data, {type: 'array'});
+                    
+                    const firstSheetName = workbook.SheetNames[0];
+                    const worksheet = workbook.Sheets[firstSheetName];
+                    
+                    const jsonData = XLSX.utils.sheet_to_json(worksheet, {header: 1, defval: null});
+                    
+                    if (jsonData.length < 2) {
+                        showMessage('資料為空', '檔案內容為空或缺少數據列。', 'error');
+                        return;
+                    }
+
+                    headers = jsonData[0];
+                    rawData = jsonData.slice(1).filter(row => row.some(cell => cell !== null && cell !== ''));
+
+                    // 更新 UI 狀態
+                    document.getElementById('displayFormatSelect').disabled = false;
+                    populateDropdown();
+                    showMessage('載入成功', `已成功解析 ${rawData.length} 筆有效記錄。`, 'success');
+                    
+                    // 切換畫面顯示
+                    document.getElementById('placeholder').style.opacity = '0';
+                    setTimeout(() => {
+                        document.getElementById('placeholder').classList.add('hidden');
+                        document.getElementById('chartContainer').classList.remove('hidden');
+                        setTimeout(() => {
+                            document.getElementById('chartContainer').style.opacity = '1';
+                        }, 50);
+                    }, 300);
+
+                    document.getElementById('exportBtn').disabled = false;
+
+                } catch (error) {
+                    console.error(error);
+                    showMessage('解析失敗', '讀取檔案時發生錯誤，請確認檔案內容是否損毀。', 'error');
+                }
+            };
+            reader.readAsArrayBuffer(file);
+            e.target.value = '';
+        });
+
+        // 填充下拉選單
+        function populateDropdown() {
+            const select = document.getElementById('variableSelect');
+            select.innerHTML = '';
+            
+            headers.forEach((header, index) => {
+                const optionText = header ? header.toString().trim() : `未命名欄位 ${index + 1}`;
+                if (optionText) {
+                    const option = document.createElement('option');
+                    option.value = index;
+                    option.textContent = optionText;
+                    select.appendChild(option);
+                }
+            });
+
+            select.disabled = false;
+            updateChart();
+        }
+
+        // 動態生成不重複的顏色 (利用黃金比例分散色相)
+        function generateUniqueColors(count) {
+            const colors = [];
+            // 黃金比例共軛角度約為 137.508 度，能確保生成的顏色在色相環上均勻且不重複
+            for (let i = 0; i < count; i++) {
+                const hue = (i * 137.508) % 360; 
+                // 飽和度 75%, 亮度 55%，確保顏色鮮明且不刺眼
+                colors.push(`hsla(${hue}, 75%, 55%, 0.85)`);
+            }
+            return colors;
+        }
+
+        // 依據選擇的維度彙整數據
+        function getAggregatedData(columnIndex) {
+            const counts = {};
+            currentTotalCount = 0; // 重置總數計算
+
+            rawData.forEach(row => {
+                let val = row[columnIndex];
+                val = (val === null || val === undefined || val === '') ? '(空白/未填)' : val.toString().trim();
+                counts[val] = (counts[val] || 0) + 1;
+                currentTotalCount++; // 計算總筆數
+            });
+
+            // 更新左側總數顯示卡片 (帶有千分位)
+            document.getElementById('totalCountDisplay').textContent = currentTotalCount.toLocaleString();
+
+            const sortedData = Object.entries(counts).sort((a, b) => b[1] - a[1]);
+            
+            let finalLabels = [];
+            let finalData = [];
+            
+            // 類別過多時合併為「其他」
+            if (sortedData.length > 25 && currentChartType !== 'line') {
+                const topItems = sortedData.slice(0, 15);
+                const others = sortedData.slice(15);
+                const othersCount = others.reduce((sum, item) => sum + item[1], 0);
+                
+                finalLabels = topItems.map(item => item[0]);
+                finalData = topItems.map(item => item[1]);
+                
+                finalLabels.push(`其他 (${others.length} 項)`);
+                finalData.push(othersCount);
+            } else {
+                finalLabels = sortedData.map(item => item[0]);
+                finalData = sortedData.map(item => item[1]);
+            }
+
+            return { labels: finalLabels, data: finalData };
+        }
+
+        // 格式化數值與百分比字串
+        function formatLabelValue(value, total) {
+            const formatType = document.getElementById('displayFormatSelect').value;
+            const percentage = ((value / total) * 100).toFixed(1) + '%';
+            
+            if (formatType === 'percentage') return percentage;
+            if (formatType === 'both') return `${value} (${percentage})`;
+            return value; // 預設 count
+        }
+
+        // 更新圖表
+        function updateChart() {
+            const select = document.getElementById('variableSelect');
+            if (select.value === '' || rawData.length === 0) return;
+
+            const columnIndex = parseInt(select.value, 10);
+            const variableName = select.options[select.selectedIndex].text;
+            const chartData = getAggregatedData(columnIndex);
+
+            drawChart(variableName, chartData.labels, chartData.data);
+        }
+
+        // 繪製/重繪 Chart.js
+        function drawChart(labelName, labels, data) {
+            const ctx = document.getElementById('myChart').getContext('2d');
+            
+            if (chartInstance) {
+                chartInstance.destroy();
+            }
+
+            let actualType = currentChartType;
+            let indexAxis = 'x';
+            
+            if (currentChartType === 'horizontalBar') {
+                actualType = 'bar';
+                indexAxis = 'y';
+            }
+
+            // 決定顏色配置：圓餅圖使用動態生成的不重複顏色，條圖/線圖使用品牌主色
+            const bgColors = actualType === 'pie' 
+                            ? generateUniqueColors(data.length) 
+                            : 'rgba(14, 165, 233, 0.85)'; // Tailwind brand-teal
+
+            const config = {
+                type: actualType,
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: `數量`,
+                        data: data,
+                        backgroundColor: bgColors,
+                        borderColor: actualType === 'line' ? '#0ea5e9' : (actualType === 'pie' ? '#ffffff' : 'transparent'),
+                        borderWidth: actualType === 'pie' ? 2 : (actualType === 'line' ? 3 : 0),
+                        tension: 0.3,
+                        borderRadius: (actualType === 'bar' && currentChartType !== 'horizontalBar') ? {topLeft: 6, topRight: 6} : (currentChartType === 'horizontalBar' ? {topRight: 6, bottomRight: 6} : 0),
+                        fill: actualType === 'line' ? { target: 'origin', above: 'rgba(14, 165, 233, 0.1)' } : false
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    indexAxis: indexAxis,
+                    layout: {
+                        padding: { top: 20, right: 30, bottom: 10, left: 10 }
+                    },
+                    plugins: {
+                        legend: {
+                            display: actualType === 'pie',
+                            position: 'right',
+                            labels: {
+                                font: { family: "'Noto Sans TC', sans-serif", weight: 'bold' },
+                                padding: 20,
+                                usePointStyle: true,
+                            }
+                        },
+                        title: {
+                            display: true,
+                            text: `維度統計分佈：${labelName}`,
+                            font: { size: 20, family: "'Noto Sans TC', sans-serif", weight: '900' },
+                            padding: { top: 10, bottom: 30 },
+                            color: '#1e293b'
+                        },
+                        customCanvasBackgroundColor: { color: 'white' },
+                        // DataLabels 顯示設定
+                        datalabels: {
+                            display: actualType !== 'line', // 線圖預設不顯示文字以免太擁擠
+                            color: actualType === 'pie' ? '#ffffff' : '#475569',
+                            anchor: actualType === 'pie' ? 'center' : 'end',
+                            align: actualType === 'pie' ? 'center' : (currentChartType === 'horizontalBar' ? 'right' : 'top'),
+                            offset: actualType === 'pie' ? 0 : 4,
+                            font: {
+                                weight: 'bold',
+                                family: "'Noto Sans TC', sans-serif",
+                                size: 12
+                            },
+                            formatter: (value, context) => {
+                                // 若數值太小在圓餅圖中不顯示標籤以免重疊 (低於 2.5%)
+                                if (actualType === 'pie' && (value / currentTotalCount) < 0.025) {
+                                    return null;
+                                }
+                                return formatLabelValue(value, currentTotalCount);
+                            },
+                            // 替圓餅圖的文字加上陰影，增加可讀性
+                            textShadowBlur: actualType === 'pie' ? 4 : 0,
+                            textShadowColor: actualType === 'pie' ? 'rgba(0,0,0,0.5)' : 'transparent'
+                        },
+                        // Tooltip 懸浮提示框設定
+                        tooltip: {
+                            backgroundColor: 'rgba(15, 23, 42, 0.9)',
+                            titleFont: { family: "'Noto Sans TC', sans-serif", size: 14 },
+                            bodyFont: { family: "'Noto Sans TC', sans-serif", size: 13, weight: 'bold' },
+                            padding: 12,
+                            cornerRadius: 8,
+                            callbacks: {
+                                label: function(context) {
+                                    const value = context.raw;
+                                    const label = context.dataset.label || '';
+                                    return ` ${label} : ${formatLabelValue(value, currentTotalCount)}`;
+                                }
+                            }
+                        }
+                    },
+                    scales: actualType === 'pie' ? {} : {
+                        x: {
+                            grid: { display: false },
+                            ticks: { 
+                                maxRotation: 45, minRotation: 0,
+                                font: { family: "'Noto Sans TC', sans-serif", weight: '500' }
+                            }
+                        },
+                        y: {
+                            beginAtZero: true,
+                            grid: { color: '#f1f5f9', borderDash: [5, 5] },
+                            ticks: { 
+                                stepSize: 1,
+                                font: { family: "'Noto Sans TC', sans-serif", weight: '500' }
+                            }
+                        }
+                    },
+                    animation: {
+                        duration: 1000,
+                        easing: 'easeOutQuart'
+                    }
+                }
+            };
+
+            chartInstance = new Chart(ctx, config);
+        }
+
+        // 切換圖表類型
+        function setChartType(type, btnElement) {
+            currentChartType = type;
+            
+            const tabs = document.querySelectorAll('.chart-tab');
+            tabs.forEach(tab => {
+                tab.classList.remove('active-tab');
+            });
+            
+            btnElement.classList.add('active-tab');
+            updateChart();
+        }
+
+        // 匯出圖表為 JPG
+        function exportChart() {
+            if (!chartInstance) return;
+            
+            const btn = document.getElementById('exportBtn');
+            const originalText = btn.innerHTML;
+            btn.innerHTML = '處理中...';
+            btn.disabled = true;
+
+            try {
+                const url_base64jp = document.getElementById("myChart").toDataURL("image/jpeg", 1.0);
+                const a = document.createElement('a');
+                const select = document.getElementById('variableSelect');
+                const varName = select.options[select.selectedIndex].text;
+                
+                a.href = url_base64jp;
+                a.download = `分析報表_${varName}.jpg`;
+                a.click();
+                
+                showMessage('匯出成功', '報表已成功儲存為 JPG 圖片。', 'success');
+            } catch (error) {
+                console.error(error);
+                showMessage('匯出失敗', '無法匯出圖表，請稍後再試。', 'error');
+            } finally {
+                setTimeout(() => {
+                    btn.innerHTML = originalText;
+                    btn.disabled = false;
+                }, 1000);
+            }
+        }
+
+        // 重新輸入 (重置資料)
+        function resetData() {
+            rawData = [];
+            headers = [];
+            currentTotalCount = 0;
+            
+            if (chartInstance) {
+                chartInstance.destroy();
+                chartInstance = null;
+            }
+
+            // 重置 UI
+            const select = document.getElementById('variableSelect');
+            select.innerHTML = '<option value="">請先載入數據...</option>';
+            select.disabled = true;
+            
+            const formatSelect = document.getElementById('displayFormatSelect');
+            formatSelect.value = 'count';
+            formatSelect.disabled = true;
+
+            document.getElementById('exportBtn').disabled = true;
+            document.getElementById('totalCountDisplay').textContent = '0';
+            
+            document.getElementById('chartContainer').style.opacity = '0';
+            setTimeout(() => {
+                document.getElementById('chartContainer').classList.add('hidden');
+                document.getElementById('placeholder').classList.remove('hidden');
+                setTimeout(() => {
+                    document.getElementById('placeholder').style.opacity = '1';
+                }, 50);
+            }, 300);
+
+            const firstTab = document.querySelector('.chart-tab');
+            setChartType('bar', firstTab);
+
+            showMessage('系統重置', '資料已清除，等待重新載入。', 'info');
+        }
+
+        // 客製化訊息框
+        function showMessage(title, text, type = 'info') {
+            const box = document.getElementById('messageBox');
+            const titleEl = document.getElementById('messageTitle');
+            const textEl = document.getElementById('messageText');
+            const iconEl = document.getElementById('messageIcon');
+
+            titleEl.textContent = title;
+            textEl.textContent = text;
+
+            let iconHtml = '';
+            if (type === 'success') {
+                iconHtml = '<svg class="text-emerald-500 w-5 h-5 drop-shadow-sm" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path><polyline points="22 4 12 14.01 9 11.01"></polyline></svg>';
+            } else if (type === 'error') {
+                iconHtml = '<svg class="text-rose-500 w-5 h-5 drop-shadow-sm" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="15" y1="9" x2="9" y2="15"></line><line x1="9" y1="9" x2="15" y2="15"></line></svg>';
+            } else {
+                iconHtml = '<svg class="text-sky-500 w-5 h-5 drop-shadow-sm" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>';
+            }
+            iconEl.innerHTML = iconHtml;
+
+            box.classList.remove('hidden');
+            void box.offsetWidth; 
+            box.classList.remove('opacity-0', 'translate-y-[-10px]');
+
+            setTimeout(hideMessage, 4000);
+        }
+
+        function hideMessage() {
+            const box = document.getElementById('messageBox');
+            box.classList.add('opacity-0', 'translate-y-[-10px]');
+            setTimeout(() => {
+                box.classList.add('hidden');
+            }, 300);
+        }
+
+    </script>
+</body>
+</html>
