@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>臨床數據智慧分析平台</title>
+    <title>數據分析統計平台</title>
     <!-- 引入 Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- 引入 SheetJS 解析 Excel/CSV -->
@@ -89,25 +89,25 @@
 <body class="min-h-screen flex flex-col text-slate-800">
 
     <!-- 頂部導覽列 -->
-    <header class="bg-white header-border shadow-sm px-6 py-4 flex justify-between items-center shrink-0 sticky top-0 z-40">
+    <header class="bg-white header-border shadow-sm px-6 py-4 flex flex-col sm:flex-row justify-between items-center shrink-0 sticky top-0 z-40 gap-4 sm:gap-0">
         <div class="flex items-center gap-4">
             <!-- Logo 圖示 -->
-            <div class="w-12 h-12 rounded-xl logo-gradient shadow-md flex items-center justify-center">
+            <div class="w-12 h-12 rounded-xl logo-gradient shadow-md flex items-center justify-center shrink-0">
                 <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path></svg>
             </div>
             <div>
-                <h1 class="text-xl font-black text-slate-800 tracking-wide">臨床數據智慧分析平台</h1>
-                <p class="text-[11px] font-bold text-slate-400 tracking-widest mt-0.5 uppercase">Advanced Clinical Analytics BI</p>
+                <h1 class="text-xl font-black text-slate-800 tracking-wide">數據分析統計平台</h1>
+                <p class="text-[11px] font-bold text-slate-400 tracking-widest mt-0.5 uppercase">Advanced Data Analytics BI</p>
             </div>
         </div>
-        <div class="flex items-center gap-3">
+        <div class="flex flex-wrap items-center gap-3 justify-center">
             <input type="file" id="fileInput" accept=".csv, application/vnd.openxmlformats-officedocument.spreadsheetml.sheet, application/vnd.ms-excel" class="hidden" />
             
-            <button onclick="document.getElementById('fileInput').click()" class="bg-slate-800 hover:bg-slate-900 text-white px-6 py-2.5 rounded-xl font-bold text-sm transition-all shadow-md hover:shadow-lg flex items-center gap-2">
-                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
-                載入臨床數據庫
+            <button onclick="document.getElementById('fileInput').click()" class="bg-slate-800 hover:bg-slate-900 text-white px-5 py-2.5 rounded-xl font-bold text-sm transition-all shadow-md hover:shadow-lg flex items-center gap-2">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="shrink-0"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
+                上傳想作分析統計的資料檔(excel檔)
             </button>
-            <button onclick="resetData()" class="bg-white border-2 border-slate-200 hover:border-slate-300 hover:bg-slate-50 text-slate-600 px-6 py-2.5 rounded-xl font-bold text-sm transition-all">
+            <button onclick="resetData()" class="bg-white border-2 border-slate-200 hover:border-slate-300 hover:bg-slate-50 text-slate-600 px-6 py-2.5 rounded-xl font-bold text-sm transition-all shrink-0">
                 重新輸入
             </button>
         </div>
@@ -138,12 +138,12 @@
                 </h2>
                 
                 <div class="space-y-5">
-                    <!-- 分組維度 -->
+                    <!-- 資料項目 (原 分組維度) -->
                     <div>
-                        <label class="block text-[11px] font-black text-slate-500 mb-2 tracking-widest uppercase">分組維度 (Variable X)</label>
+                        <label class="block text-[12px] font-black text-slate-500 mb-2 tracking-widest uppercase">資料項目</label>
                         <div class="relative">
                             <select id="variableSelect" onchange="updateChart()" disabled class="w-full appearance-none bg-slate-50 border border-slate-200 text-slate-700 py-3.5 px-4 rounded-xl focus:outline-none focus:bg-white focus:border-brand-teal focus:ring-2 focus:ring-brand-teal/20 transition-all disabled:opacity-50 disabled:cursor-not-allowed font-medium shadow-inner-soft">
-                                <option value="">請先載入數據...</option>
+                                <option value="">請先上傳資料檔...</option>
                             </select>
                             <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-4 text-slate-400">
                                 <svg class="fill-current h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20"><path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z"/></svg>
@@ -153,11 +153,11 @@
 
                     <!-- 顯示格式 -->
                     <div>
-                        <label class="block text-[11px] font-black text-slate-500 mb-2 tracking-widest uppercase">資料顯示格式 (Data Format)</label>
+                        <label class="block text-[12px] font-black text-slate-500 mb-2 tracking-widest uppercase">資料顯示格式</label>
                         <div class="relative">
                             <select id="displayFormatSelect" onchange="updateChart()" disabled class="w-full appearance-none bg-slate-50 border border-slate-200 text-slate-700 py-3.5 px-4 rounded-xl focus:outline-none focus:bg-white focus:border-brand-teal focus:ring-2 focus:ring-brand-teal/20 transition-all disabled:opacity-50 disabled:cursor-not-allowed font-medium shadow-inner-soft">
-                                <option value="count">數量 (Count)</option>
-                                <option value="percentage">百分比 (Percentage)</option>
+                                <option value="count">數量</option>
+                                <option value="percentage">百分比</option>
                                 <option value="both">數量與百分比</option>
                             </select>
                             <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-4 text-slate-400">
@@ -168,7 +168,7 @@
 
                     <!-- 統計指標 (固定) -->
                     <div>
-                        <label class="block text-[11px] font-black text-slate-500 mb-2 tracking-widest uppercase">統計指標 (Metric Y)</label>
+                        <label class="block text-[12px] font-black text-slate-500 mb-2 tracking-widest uppercase">統計指標</label>
                         <div class="w-full bg-slate-50 border border-slate-200 text-slate-700 py-3.5 px-4 rounded-xl flex items-center gap-2 shadow-inner-soft">
                             <span class="text-rose-500">📌</span>
                             <span class="font-bold text-sm">筆數加總 (Count/Sum)</span>
@@ -179,7 +179,7 @@
                 <!-- 總數顯示卡片 -->
                 <div class="mt-8 bg-gradient-to-br from-slate-800 to-slate-900 rounded-2xl p-5 text-white shadow-lg relative overflow-hidden">
                     <div class="absolute top-0 right-0 -mt-4 -mr-4 w-24 h-24 bg-white opacity-5 rounded-full blur-xl"></div>
-                    <p class="text-[11px] font-bold text-slate-400 tracking-widest uppercase mb-1">分析總數 (Total Records)</p>
+                    <p class="text-[12px] font-bold text-slate-400 tracking-widest uppercase mb-1">分析總數</p>
                     <div class="flex items-baseline gap-2">
                         <span id="totalCountDisplay" class="text-4xl font-black tracking-tight text-white">0</span>
                         <span class="text-sm font-medium text-slate-400">筆</span>
@@ -226,7 +226,7 @@
                         <svg class="w-12 h-12 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
                     </div>
                     <h3 class="text-xl font-black text-slate-400 mb-2">等待載入分析數據</h3>
-                    <p class="text-slate-400 text-sm font-medium">請點擊上方「載入臨床數據庫」按鈕開始</p>
+                    <p class="text-slate-400 text-sm font-medium">請點擊上方按鈕上傳您的資料檔開始</p>
                 </div>
 
                 <!-- Chart.js 畫布容器 -->
@@ -298,6 +298,7 @@
                     // 更新 UI 狀態
                     document.getElementById('displayFormatSelect').disabled = false;
                     populateDropdown();
+                    
                     showMessage('載入成功', `已成功解析 ${rawData.length} 筆有效記錄。`, 'success');
                     
                     // 切換畫面顯示
@@ -321,23 +322,30 @@
             e.target.value = '';
         });
 
-        // 填充下拉選單
+        // 填充下拉選單 (過濾空白標題)
         function populateDropdown() {
             const select = document.getElementById('variableSelect');
             select.innerHTML = '';
             
+            let hasValidOption = false;
             headers.forEach((header, index) => {
-                const optionText = header ? header.toString().trim() : `未命名欄位 ${index + 1}`;
-                if (optionText) {
+                // 確保 header 不是 null/undefined 且 trim 後不是空字串
+                if (header !== null && header !== undefined && header.toString().trim() !== '') {
+                    const optionText = header.toString().trim();
                     const option = document.createElement('option');
                     option.value = index;
                     option.textContent = optionText;
                     select.appendChild(option);
+                    hasValidOption = true;
                 }
             });
 
-            select.disabled = false;
-            updateChart();
+            if (hasValidOption) {
+                select.disabled = false;
+                updateChart();
+            } else {
+                select.innerHTML = '<option value="">未找到有效欄位</option>';
+            }
         }
 
         // 動態生成不重複的顏色 (利用黃金比例分散色相)
@@ -468,7 +476,7 @@
                         },
                         title: {
                             display: true,
-                            text: `維度統計分佈：${labelName}`,
+                            text: `資料項目統計：${labelName}`,
                             font: { size: 20, family: "'Noto Sans TC', sans-serif", weight: '900' },
                             padding: { top: 10, bottom: 30 },
                             color: '#1e293b'
@@ -597,7 +605,7 @@
 
             // 重置 UI
             const select = document.getElementById('variableSelect');
-            select.innerHTML = '<option value="">請先載入數據...</option>';
+            select.innerHTML = '<option value="">請先上傳資料檔...</option>';
             select.disabled = true;
             
             const formatSelect = document.getElementById('displayFormatSelect');
